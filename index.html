@@ -67,6 +67,7 @@ p {
 <body>
 
 <div class="card">
+
   <div class="logo">🚁 WobbleLift</div>
 
   <div class="icon" id="icon">⏳</div>
@@ -80,10 +81,12 @@ p {
   <div class="footer">
     WobbleLift • Reach for the sky!
   </div>
+
 </div>
 
 <script>
 (function () {
+
   const hash = new URLSearchParams(
     window.location.hash.substring(1)
   );
@@ -92,9 +95,12 @@ p {
     window.location.search
   );
 
-  const icon = document.getElementById("icon");
-  const title = document.getElementById("title");
-  const message = document.getElementById("message");
+  const value = key =>
+    hash.get(key) || query.get(key);
+
+  const icon = document.getElementById('icon');
+  const title = document.getElementById('title');
+  const message = document.getElementById('message');
 
   function show(symbol, heading, description) {
     icon.textContent = symbol;
@@ -102,60 +108,75 @@ p {
     message.textContent = description;
   }
 
-  const error =
-    hash.get("error") ||
-    query.get("error");
+  const error = value('error');
+  const errorDescription = value('error_description');
 
-  const errorDescription =
-    hash.get("error_description") ||
-    query.get("error_description");
+  const accessToken = value('access_token');
+  const refreshToken = value('refresh_token');
+  const tokenType = value('token_type');
 
-  const accessToken = hash.get("access_token");
-  const tokenType = hash.get("token_type");
-  const refreshToken = hash.get("refresh_token");
-  const confirmationType = hash.get("type");
+  const confirmationType = value('type');
+  const authCode = value('code');
 
-  // Remove sensitive authentication values from the URL.
-  if (
-    window.location.hash ||
-    window.location.search
-  ) {
+  // Remove session credentials from the address bar.
+  if (window.location.hash || window.location.search) {
     history.replaceState(
       null,
-      "",
+      '',
       window.location.pathname
     );
   }
 
   if (error) {
+
     show(
-      "❌",
-      "Confirmation unsuccessful",
+      '❌',
+      'Confirmation unsuccessful',
       errorDescription ||
-      "Your confirmation link may have expired. Please return to WobbleLift and request another email."
+      'Your confirmation link may have expired. Please return to WobbleLift and request another email.'
     );
+
     return;
   }
+
+  // Supabase may return a session after confirmation.
+  // Guest account upgrades can use email_change.
 
   if (
     accessToken &&
     refreshToken &&
-    tokenType === "bearer" &&
-    confirmationType === "signup"
+    tokenType?.toLowerCase() === 'bearer' &&
+    ['signup', 'email_change'].includes(confirmationType)
   ) {
+
     show(
-      "✅",
-      "Email Verified!",
-      "Your WobbleLift account has been confirmed. You can now return to the game and log in!"
+      '✅',
+      'Email Verified!',
+      'Your WobbleLift email has been confirmed. You can now return to the game and sign in!'
     );
+
+    return;
+  }
+
+  // PKCE confirmation codes require an exchange.
+
+  if (authCode) {
+
+    show(
+      'ℹ️',
+      'Confirmation requires completion',
+      'The confirmation link returned an authentication code. Return to WobbleLift to check your account, or contact support if it is not confirmed.'
+    );
+
     return;
   }
 
   show(
-    "ℹ️",
-    "Confirmation not detected",
-    "No completed email confirmation was detected. Please open the confirmation link from your WobbleLift registration email."
+    'ℹ️',
+    'Confirmation status unavailable',
+    'No completed confirmation details were included in this link. Return to WobbleLift and try signing in. If sign-in works, your email is confirmed.'
   );
+
 })();
 </script>
 
